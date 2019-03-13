@@ -49,8 +49,8 @@
 (defn ^:private get-spec-field-name
   [type-name field-name
    {:keys [prefix]}]
-  (keyword (str (name prefix) "." (->kebab-case-string type-name))
-           (->kebab-case-string field-name)))
+  (keyword (str (name prefix) "." type-name)
+           field-name))
 
 (defn ^:private get-spec-param-name
   [type-name field-name param-name
