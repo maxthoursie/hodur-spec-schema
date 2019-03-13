@@ -136,20 +136,20 @@
 
       (many-cardinality? obj)
       :many-ref
-      
+
       (:type/enum obj)
       :enum
 
       (:type/union obj)
       :union
-      
+
       (and (:field/name obj)
            (-> obj :field/parent :type/enum))
       :enum-entry
 
       (:field/union-type obj)
       :union-field
-      
+
       (:type/name obj)
       :entity
 
@@ -214,11 +214,14 @@
                       [entity-spec] other-nodes))))
 
 (defmethod get-spec-form* :enum
-  [{:keys [field/_parent]} opts]
-  (list* `s/or
-         (reduce (fn [c {:keys [field/kebab-case-name] :as field}]
-                   (conj c kebab-case-name (get-spec-name field opts)))
-                 [] _parent)))
+  [{:keys [field/_parent]} {:keys [enum-as-set] :as opts}]
+  (if enum-as-set
+    (set (for [field _parent]
+           (get-spec-name field opts)))
+    (list* `s/or
+           (reduce (fn [c {:keys [field/kebab-case-name] :as field}]
+                     (conj c kebab-case-name (get-spec-name field opts)))
+                   [] _parent))))
 
 (defmethod get-spec-form* :union
   [{:keys [field/_parent]} opts]
@@ -403,7 +406,7 @@
                        v (first (vals entry))]
                    #_(do (println " - " k)
                          (println " =>" v)
-                         (println " ")) 
+                         (println " "))
                    `(s/def ~k ~v)))))))
 
 (defn ^:private eval-default-prefix []
@@ -470,7 +473,7 @@
                       (clojure.string/starts-with? (namespace %) "my-field")
                       (clojure.string/starts-with? (namespace %) "my-param"))
                  (keys (s/registry))))
-  
+
   (s/valid? :my-app.person.height/unit "METERS")
 
   (s/valid? :my-app/pet {:name "bla" :dob #inst "2000-10-10" :race "cat"})
@@ -519,5 +522,5 @@
   (gen/generate (s/gen :my-app.extend-override-entity/email-field))
 
   (gen/generate (s/gen :my-app/extend-override-entity))
-  
+
   )
