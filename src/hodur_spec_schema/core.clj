@@ -247,16 +247,19 @@
   (let [entity-spec (get-spec-form (dissoc obj :field/optional) opts)]
     (list* `s/nilable [entity-spec])))
 
+(defn split-req-opt [fields opts]
+  (let [names-fn #(get-spec-name % opts)
+        {opt true req false} (group-by (comp true? :field/optional) fields)]
+    (map #(mapv names-fn %) [req opt])))
+
+(defn get-keys [[req opt] opts]
+  (if (:namespace-keys opts)
+    `(s/keys :req ~req :opt ~opt)
+    `(s/keys :req-un ~req :opt-un ~opt)))
+
 (defmethod get-spec-form* :entity
   [{:keys [field/_parent type/implements]} opts]
-  (let [filter-fn (fn [pred c]
-                    (->> c
-                         (filter pred)
-                         (map #(get-spec-name % opts))
-                         vec))
-        req (filter-fn #(not (:field/optional %)) _parent)
-        opt (filter-fn #(:field/optional %) _parent)
-        form `(s/keys :req-un ~req :opt-un ~opt)]
+  (let [form (get-keys (split-req-opt _parent opts) opts)]
     (if implements
       (list* `s/and
              (reduce (fn [c interface]
@@ -266,15 +269,9 @@
 
 (defmethod get-spec-form* :param-group
   [params {:keys [group-type] :as opts}]
-  (let [filter-fn (fn [pred c]
-                    (->> c
-                         (filter pred)
-                         (map #(get-spec-name % opts))
-                         vec))
-        req (filter-fn #(not (:param/optional %)) params)
-        opt (filter-fn #(:param/optional %) params)]
+  (let [[req opt] (split-req-opt params opts)]
     (case group-type
-      :map `(s/keys :req-un ~req :opt-un ~opt)
+      :map (get-keys [req opt] opts)
       :tuple (list* `s/tuple (map #(get-spec-name % opts) params)))))
 
 (defmethod get-spec-form* "String" [_ _] `string?)
