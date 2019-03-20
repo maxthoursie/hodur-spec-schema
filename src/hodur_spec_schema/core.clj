@@ -46,23 +46,25 @@
   (keyword (name prefix)
            (->kebab-case-string type-name)))
 
+(defn optional-prefix [{:keys [prefix no-prefix]}]
+  (when-not no-prefix
+    (str (name prefix) ".")))
+
 (defn ^:private get-spec-field-name
-  [type-name field-name
-   {:keys [prefix]}]
-  (keyword (str (name prefix) "." type-name)
+  [type-name field-name opts]
+  (keyword (str (optional-prefix opts) type-name)
            field-name))
 
 (defn ^:private get-spec-param-name
-  [type-name field-name param-name
-   {:keys [prefix]}]
-  (keyword (str (name prefix) "." (->kebab-case-string type-name) "."
+  [type-name field-name param-name opts]
+  (keyword (str (optional-prefix opts) (->kebab-case-string type-name) "."
                 (->kebab-case-string field-name))
            (->kebab-case-string param-name)))
 
 (defn ^:private get-spec-param-group-name
   [type-name field-name
-   {:keys [prefix params-postfix group-type] :or {params-postfix "%"} :as opts}]
-  (keyword (str (name prefix) "." (->kebab-case-string type-name))
+   {:keys [params-postfix group-type] :or {params-postfix "%"} :as opts}]
+  (keyword (str (optional-prefix opts) (->kebab-case-string type-name))
            (str (->kebab-case-string field-name)
                 (case group-type
                   :map ""
@@ -252,7 +254,9 @@
 
 (defn split-req-opt [fields opts]
   (let [names-fn #(get-spec-name % opts)
-        {opt true req false} (group-by (comp true? :field/optional) fields)]
+        {opt true req false} (group-by #(or (:field/optional %)
+                                            (:param/optional %))
+                                       fields)]
     (map #(mapv names-fn %) [req opt])))
 
 (defn get-keys [[req opt] opts]
